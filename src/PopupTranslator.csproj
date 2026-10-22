@@ -1,0 +1,68 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <!--
+      刻意使用 net8.0-windows（不加 10.0.19041 TFM）：
+      Windows OCR 透過手寫的 WinRT COM 介面呼叫（見 Ocr/WinRtOcr.cs），
+      因此不需要約 25 MB 的 Microsoft.Windows.SDK.NET.dll 投影組件，執行檔可維持極小。
+    -->
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <PlatformTarget>x64</PlatformTarget>
+    <AssemblyName>PopupTranslator</AssemblyName>
+    <RootNamespace>PopupTranslator</RootNamespace>
+    <ApplicationIcon>app.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Version>1.0.0</Version>
+    <Product>快速翻譯 PopupTranslator</Product>
+    <Description>系統匣快速翻譯工具（快捷鍵 / 剪貼簿 / 螢幕 OCR）</Description>
+    <SatelliteResourceLanguages>zh-Hant</SatelliteResourceLanguages>
+    <DebugType>none</DebugType>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <!-- 同時以 manifest 與 Application.SetHighDpiMode 宣告 PerMonitorV2（manifest 確保最早生效） -->
+    <NoWarn>$(NoWarn);WFAC010</NoWarn>
+    <PublishSingleFile>true</PublishSingleFile>
+    <!-- 框架相依版：沒有 .NET 8 時允許在較新的主要版本（9/10）Desktop Runtime 上執行 -->
+    <RollForward>Major</RollForward>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="app.ico" LogicalName="PopupTranslator.app.ico" />
+  </ItemGroup>
+
+  <!--
+    自包含（self-contained）版瘦身：Windows Desktop 執行階段同時包含 WPF，本程式只用 WinForms。
+    在 SDK 解析執行階段檔案後，移除 WPF / 設計工具 / VB / 資料庫等用不到的組件與原生 DLL，
+    deps.json 也會一併排除，不影響執行。以 -p:SlimSelfContained=false 可停用。
+  -->
+  <PropertyGroup>
+    <_SlimPattern>^(PresentationFramework.*|PresentationCore|PresentationUI|ReachFramework|System\.Xaml|WindowsBase|WindowsFormsIntegration|UIAutomation.*|System\.Windows\.Controls\.Ribbon|System\.Windows\.Presentation|System\.Windows\.Input\.Manipulations|System\.Printing|DirectWriteForwarder|System\.Windows\.Forms\.Design.*|System\.Design|System\.Drawing\.Design|Microsoft\.VisualBasic.*|System\.Data\.Common|System\.Data\.SqlClient|System\.Data\.Odbc|System\.Data\.OleDb|System\.Data\.DataSetExtensions|wpfgfx_cor3|PresentationNative_cor3|D3DCompiler_47_cor3|PenImc_cor3)(\.resources)?$</_SlimPattern>
+  </PropertyGroup>
+
+  <Target Name="SlimWindowsDesktopRuntime" AfterTargets="ResolveRuntimePackAssets"
+          Condition="'$(SelfContained)' == 'true' and '$(SlimSelfContained)' != 'false'">
+    <ItemGroup>
+      <_SlimRemove Include="@(RuntimePackAsset)"
+                   Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('%(Filename)', '$(_SlimPattern)'))" />
+      <RuntimePackAsset Remove="@(_SlimRemove)" />
+    </ItemGroup>
+    <Message Importance="high" Text="SlimSelfContained: removed @(_SlimRemove->Count()) runtime files (WPF etc.)" />
+  </Target>
+
+  <Target Name="SlimWindowsDesktopPublishFiles" AfterTargets="ComputeResolvedFilesToPublishList"
+          Condition="'$(SelfContained)' == 'true' and '$(SlimSelfContained)' != 'false'">
+    <ItemGroup>
+      <_SlimPublishRemove Include="@(ResolvedFileToPublish)"
+                          Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('%(Filename)', '$(_SlimPattern)'))" />
+      <ResolvedFileToPublish Remove="@(_SlimPublishRemove)" />
+    </ItemGroup>
+  </Target>
+
+</Project>

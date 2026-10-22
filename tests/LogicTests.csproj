@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../src/Translation/*.cs" Exclude="../src/Translation/TranslatorFactory.cs" />
+    <Compile Include="../src/Core/Languages.cs" />
+    <Compile Include="../src/Ocr/TextUtil.cs" />
+  </ItemGroup>
+</Project>
